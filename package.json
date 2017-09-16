@@ -10,13 +10,13 @@
     "type": "git",
     "url": "git+https://github.com/anticlergygang/osls.git"
   },
-  "author": "antiClergy",
+  "author": "anticlergy",
   "license": "GPL-3.0",
   "bugs": {
     "url": "https://github.com/anticlergygang/osls/issues"
   },
   "homepage": "https://github.com/anticlergygang/osls#readme",
   "dependencies": {
-    "mime-types": "^2.1.16"
+    "shdb": "0.0.17"
   }
 }
