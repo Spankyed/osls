@@ -1,113 +1,117 @@
+const hostname = 'opensourcelivestream.com';
 const shdb = require('shdb');
+
 const http = require('http');
 const https = require('https');
-const geoip = require('geoip-lite');
-const serverStartTime = (new Date).getTime();
-const WebSocketServer = require('websocket').server;
-const hashFunction = require('argon2');
-let remoteAddresses = {};
-let serverHits = 0;
-const generateHashPromise = data => {
+const WebSocket = require('ws');
+const RtmpServer = require('rtmp-server');
+// all of the above will become what's below 
+// const shws = require('shws');
+
+const exec = require('child_process').exec;
+const execPromise = stdin => {
     return new Promise((resolve, reject) => {
-        hashFunction.hash(data, {
-            type: hashFunction.argon2d
-        }).then(hash => {
-            resolve(hash);
-        }).catch(err => {
-            reject('Something went wrong.');
-        });
-    });
-};
-const verifyHashPromise = (data, hash) => {
-    return new Promise((resolve, reject) => {
-        hashFunction.verify(`$argon2d$v=19$m=4096,t=3,p=1\$${hash}`, data).then(match => {
-            if (match) {
-                resolve('verifyHashPromise => pass');
+        exec(stdin, (err, stdout, stderr) => {
+            if (err) {
+                reject(err);
+            } else if (stderr) {
+                reject(`stderr: ${stderr}`);
             } else {
-                reject('verifyHashPromise => fail');
+                resolve(`stdout: ${stdout}`);
             }
-        }).catch(err => {
-            reject(err);
         });
     });
 };
-const logRequestPromise = (remoteAddress, request, timeout = 3000) => {
-    return new Promise((resolve, reject) => {
-        const logRequestPromiseTimeout = setTimeout(() => {
-            reject('logRequestPromise timeout');
-        }, timeout);
-        const timestamp = (new Date).getTime();
-        if (Object.keys(remoteAddresses).indexOf(remoteAddress) !== -1) {
-            if (geoip.lookup(remoteAddress) === remoteAddresses[request.connection.remoteAddress].geoip) {} else {
-                remoteAddresses[remoteAddress].geoip = geoip.lookup(remoteAddress);
-            }
-            const lastRequest = remoteAddresses[remoteAddress].latestRequest;
-            remoteAddresses[remoteAddress].latestRequest = timestamp;
-            remoteAddresses[remoteAddress].requestCount++;
-            remoteAddresses[remoteAddress].requests.push(request);
-            clearTimeout(logRequestPromiseTimeout);
-            resolve(remoteAddresses[remoteAddress]);
+shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileData => {
+    return Promise.all([shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/fullchain.pem`), Promise.resolve(fileData)]);
+}).then(fileDatas => {
+    const httpsServer = https.createServer({
+        'key': fileDatas[1],
+        'cert': fileDatas[0]
+    }, (req, res) => {
+        console.log(`${req.connection.remoteAddress} => https => ${req.method} => ${req.url}`);
+        if (req.url === '/') {
+            shdb.readFilePromise(`/root/${hostname}/responses/html/index.html`).then(fileData => {
+                res.writeHead(200, { 'Content-Type': 'text/html' });
+                res.end(fileData);
+            }).catch(err => {
+                res.writeHead(404, { 'Content-Type': 'text/plain' });
+                res.end('404');
+            });
+        } else if (req.url === '/index.m3u8') {
+            shdb.readFilePromise(`/root/${hostname}/videos/index.m3u8`).then(fileData => {
+                res.writeHead(200, { 'Content-Type': 'application/vnd.apple.mpegurl' });
+                res.end(fileData.toString('utf8'), 'utf8');
+            }).catch(err => {
+                res.writeHead(404, { 'Content-Type': 'text/plain' });
+                res.end('404');
+            });
+        } else if (req.url.indexOf('index') !== -1 && req.url.indexOf('.ts') !== -1) {
+            shdb.readFilePromise(`/root/${hostname}/videos${req.url}`).then(fileData => {
+                res.writeHead(200, { 'Content-Type': 'video/mp2t' });
+                res.end(fileData);
+            }).catch(err => {
+                console.log(err);
+            });
         } else {
-            remoteAddresses[remoteAddress] = {
-                'requestCount': 1,
-                'joined': timestamp,
-                'geoip': geoip.lookup(remoteAddress),
-                'requests': [request],
-                'latestRequest': timestamp
-            };
-            clearTimeout(logRequestPromiseTimeout);
-            resolve(remoteAddresses[remoteAddress]);
+            res.writeHead(404, { 'Content-Type': 'text/plain' });
+            res.end('404');
         }
     });
-};
-http.createServer((request, response) => {
-    serverHits++;
-    logRequestPromise(request.connection.remoteAddress, request).then(out => {
-        console.log(`'${request.connection.remoteAddress}' => '${request.url}' @ '${(new Date).getTime()}'`);
-        response.writeHead(302, {
-            'Location': 'https://opensourcelivestream.com/'
+    const wssServer = new WebSocket.Server({ 'server': httpsServer });
+    wssServer.on('connection', (ws, req) => {
+        console.log(`${req.connection.remoteAddress} => wss => open`);
+        ws.on('message', message => {
+            console.log(`${req.connection.remoteAddress} => wss => message => ${message}`);
         });
-        response.end();
-    }).catch(err => {
-        console.log(err);
-        response.writeHead(500, { 'Content-Type': 'text/plain' });
-        response.end();
+        ws.on('close', () => {
+            console.log(`${req.connection.remoteAddress} => wss => close`);
+        });
     });
-}).listen(80, '198.211.105.49');
-const httpsServer = https.createServer({
-    key: fs.readFileSync('/etc/letsencrypt/live/opensourcelivestream.com/privkey.pem'),
-    cert: fs.readFileSync('/etc/letsencrypt/live/opensourcelivestream.com/fullchain.pem')
-}, (request, response) => {
-    serverHits++;
-    logRequestPromise(request.connection.remoteAddress, request).then(out => {
-        console.log(`'${request.connection.remoteAddress}' => '${request.url}' @ '${(new Date).getTime()}'`);
-        response.writeHead(200, { 'Content-Type': 'text/plain' });
-        response.end('Under construction.');
-    }).catch(err => {
-        console.log(err);
-        response.writeHead(500, { 'Content-Type': 'text/plain' });
-        response.end();
+    httpsServer.listen(443, hostname);
+    return Promise.resolve();
+}).then(() => {
+    const httpServer = http.createServer((req, res) => {
+        console.log(`${req.connection.remoteAddress} => http => ${req.method} => ${req.url}`);
+        res.writeHead(301, { 'Location': `https://${hostname}/` });
+        res.end('Going somewhere safe.');
     });
-}).listen(443, '198.211.105.49');
-const wsServer = new WebSocketServer({
-    httpServer: httpsServer,
-    autoAcceptConnections: false
-});
-wsServer.on('request', (request) => {
-    if (request.origin != 'https://opensourcelivestream.com') {
-        request.reject();
-    } else {
-        let connection = request.accept('opensourcelivestream-protocol', request.origin);
-        logRequestPromise(connection.remoteAddress, request).then(out => {
-            console.log(`'${request.connection.remoteAddress}' => 'WSS Connect' @ ${(new Date).getTime()}`);
-            serverHits++;
-            connection.on('message', message => {});
-            connection.on('close', (reasonCode, description) => {
-                console.log(`'${request.connection.remoteAddress}' => 'WSS Close' @ '${(new Date).getTime()}'`);
+    httpServer.listen(80, hostname);
+    const rtmpServer = new RtmpServer();
+    rtmpServer.on('error', err => {
+        throw err;
+    });
+    rtmpServer.on('client', client => {
+        client.on('connect', () => {
+            console.log(`CONNECT ${client.app}`);
+        });
+        client.on('play', ({ streamName }) => {
+            console.log(`PLAY ${streamName}`);
+        });
+        client.on('publish', ({ streamName }) => {
+            console.log(`PUBLISH ${streamName}`);
+            execPromise(`ffmpeg -v verbose -i rtmp://${hostname}/live/${streamName} -c:v libx264 -c:a aac -ac 1 -strict -2 -crf 18 -profile:v baseline -maxrate 400k -bufsize 1835k -pix_fmt yuv420p -flags -global_header -f segment -segment_list index.m3u8 -segment_list_flags +live -segment_time 3 -segment_list_size 18 index%03d.ts`).then(out => {
+                console.log(out);
+            }).catch(err => {
+                console.log(err);
             });
-        }).catch(err => {
-            console.log(err);
-            request.reject();
         });
-    }
+        client.on('stop', () => {
+            console.log('client disconnected');
+        });
+    });
+    rtmpServer.listen(1935);
+    return Promise.resolve();
+}).then(() => {
+    console.log('Quiet... too quiet.');
+}).catch(err => {
+    console.log(err);
+});
+process.stdin.resume();
+process.on('exit', () => {});
+process.on('SIGINT', () => {
+    process.exit()
+});
+process.on('uncaughtException', () => {
+    process.exit()
 });
