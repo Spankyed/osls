@@ -7,21 +7,20 @@ const WebSocket = require('ws');
 const RtmpServer = require('rtmp-server');
 // all of the above will become what's below 
 // const shws = require('shws');
+const { spawn } = require('child_process');
+const spawnFfmpeg = (hostname, streamName) => {
+    const args = ['-i', `rtmp://${hostname}/live/${streamName}`, '-bsf:v', 'h264_mp4toannexb', '-qscale', '0', '-acodec', 'copy', '-vcodec', 'copy', '-bufsize', ' 1835k', '-f', 'HLS', '-hls_wrap', '8', 'index.m3u8'];
+    const ffmpeg = spawn('ffmpeg', args);
+    console.log(`ffmpeg spawned for ${streamName}`);
 
-const exec = require('child_process').exec;
-const execPromise = stdin => {
-    return new Promise((resolve, reject) => {
-        exec(stdin, (err, stdout, stderr) => {
-            if (err) {
-                reject(err);
-            } else if (stderr) {
-                reject(`stderr: ${stderr}`);
-            } else {
-                resolve(`stdout: ${stdout}`);
-            }
-        });
+    ffmpeg.on('exit', () => {
+        console.log(`the ffmpeg spawned for ${streamName} exited`);
     });
-};
+    ffmpeg.stderr.on('data', function(data) {
+        console.log(`${streamName} data: ${data}`);
+    });
+    return ffmpeg;
+}
 shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileData => {
     return Promise.all([shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/fullchain.pem`), Promise.resolve(fileData)]);
 }).then(fileDatas => {
@@ -90,11 +89,7 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
         });
         client.on('publish', ({ streamName }) => {
             console.log(`PUBLISH ${streamName}`);
-            execPromise(`ffmpeg -v verbose -i rtmp://${hostname}/live/${streamName} -c:v libx264 -c:a aac -ac 1 -strict -2 -crf 18 -profile:v baseline -maxrate 400k -bufsize 1835k -pix_fmt yuv420p -flags -global_header -f segment -segment_list index.m3u8 -segment_list_flags +live -segment_time 3 -segment_list_size 18 index%03d.ts`).then(out => {
-                console.log(out);
-            }).catch(err => {
-                console.log(err);
-            });
+            spawnFfmpeg(hostname, streamName);
         });
         client.on('stop', () => {
             console.log('client disconnected');
