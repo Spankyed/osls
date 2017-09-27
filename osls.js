@@ -15,6 +15,7 @@ const spawnFfmpeg = (hostname, streamName) => {
 
     ffmpeg.on('exit', () => {
         console.log(`the ffmpeg spawned for ${streamName} exited`);
+        spawnFfmpeg(hostname, streamName);
     });
     ffmpeg.stderr.on('data', function(data) {
         console.log(`${streamName} data: ${data}`);
@@ -82,16 +83,16 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
     });
     rtmpServer.on('client', client => {
         client.on('connect', () => {
-            console.log(`CONNECT ${client.app}`);
+            console.log(`RTMP client ${client.app} has connected`);
         });
         client.on('play', ({ streamName }) => {
-            console.log(`PLAY ${streamName}`);
+            console.log(`RTMP stream ${streamName} play event`);
         });
         client.on('publish', ({ streamName }) => {
-            console.log(`PUBLISH ${streamName}`);
+            console.log(`RTMP stream ${streamName} publish event`);
             spawnFfmpeg(hostname, streamName);
         });
-        client.on('stop', () => {
+        client.on('stop', () => { // client.on('stop', client??? => { 
             console.log('client disconnected');
         });
     });
@@ -103,10 +104,14 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
     console.log(err);
 });
 process.stdin.resume();
-process.on('exit', () => {});
+process.on('exit', () => {
+    console.log('exit');
+});
 process.on('SIGINT', () => {
+    console.log('SIGINT');
     process.exit()
 });
 process.on('uncaughtException', () => {
+    console.log('uncaughtException');
     process.exit()
 });
