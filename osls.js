@@ -15,7 +15,6 @@ const spawnFfmpeg = (hostname, streamName) => {
 
     ffmpeg.on('exit', () => {
         console.log(`the ffmpeg spawned for ${streamName} exited`);
-        spawnFfmpeg(hostname, streamName);
     });
     ffmpeg.stderr.on('data', function(data) {
         console.log(`${streamName} data: ${data}`);
@@ -24,10 +23,10 @@ const spawnFfmpeg = (hostname, streamName) => {
 }
 shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileData => {
     return Promise.all([shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/fullchain.pem`), Promise.resolve(fileData)]);
-}).then(fileDatas => {
+}).then(cert0key1 => {
     const httpsServer = https.createServer({
-        'key': fileDatas[1],
-        'cert': fileDatas[0]
+        'key': cert0key1[1],
+        'cert': cert0key1[0]
     }, (req, res) => {
         console.log(`${req.connection.remoteAddress} => https => ${req.method} => ${req.url}`);
         if (req.url === '/') {
