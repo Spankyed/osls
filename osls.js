@@ -80,12 +80,12 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
         client.on('connect', () => {
             console.log(`RTMP client ${client.app} has connected`);
         });
-        client.on('play', ({ streamKey }) => {
-            console.log(`RTMP stream ${streamKey} play event`);
+        client.on('play', ({ streamName }) => {
+            console.log(`RTMP stream ${streamName} play event`);
         });
-        client.on('publish', ({ streamKey }) => {
-            console.log(`RTMP stream ${streamKey} publish event`);
-            spawnFfmpeg(streamKey);
+        client.on('publish', ({ streamName }) => {
+            console.log(`RTMP stream ${streamName} publish event`);
+            spawnFfmpeg(streamName);
         });
         client.on('stop', () => { // client.on('stop', client??? => { 
             console.log('client disconnected');
@@ -98,6 +98,7 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
 }).catch(err => {
     console.log(err);
 });
+
 process.stdin.resume();
 process.on('exit', () => {
     console.log('exit');
