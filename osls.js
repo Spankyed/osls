@@ -5,16 +5,15 @@ const https = require('https');
 const WebSocket = require('ws');
 const RtmpServer = require('rtmp-server');
 const { spawn } = require('child_process');
-const spawnFfmpeg = (hostname, streamName) => {
-    const args = ['-i', `rtmp://${hostname}/live/${streamName}`, '-bsf:v', 'h264_mp4toannexb', '-qscale', '0', '-acodec', 'copy', '-vcodec', 'copy', '-bufsize', ' 1835k', '-f', 'HLS', '-hls_wrap', '8', 'index.m3u8'];
+const spawnFfmpeg = streamKey => {
+    const args = ['-i', `rtmp://${hostname}/live/${streamKey}`, '-bsf:v', 'h264_mp4toannexb', '-qscale', '0', '-acodec', 'copy', '-vcodec', 'copy', '-bufsize', ' 1835k', '-f', 'HLS', '-hls_wrap', '8', '/root/videos/index.m3u8'];
     const ffmpeg = spawn('ffmpeg', args);
-    console.log(`ffmpeg spawned for ${streamName}`);
-
+    console.log(`ffmpeg spawned for ${streamKey}`);
     ffmpeg.on('exit', () => {
-        console.log(`the ffmpeg spawned for ${streamName} exited`);
+        console.log(`the ffmpeg spawned for ${streamKey} exited`);
     });
     ffmpeg.stderr.on('data', function(data) {
-        console.log(`${streamName} data: ${data}`);
+        console.log(`${streamKey} data: ${data}`);
     });
     return ffmpeg;
 }
@@ -81,12 +80,12 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
         client.on('connect', () => {
             console.log(`RTMP client ${client.app} has connected`);
         });
-        client.on('play', ({ streamName }) => {
-            console.log(`RTMP stream ${streamName} play event`);
+        client.on('play', ({ streamKey }) => {
+            console.log(`RTMP stream ${streamKey} play event`);
         });
-        client.on('publish', ({ streamName }) => {
-            console.log(`RTMP stream ${streamName} publish event`);
-            spawnFfmpeg(hostname, streamName);
+        client.on('publish', ({ streamKey }) => {
+            console.log(`RTMP stream ${streamKey} publish event`);
+            spawnFfmpeg(streamKey);
         });
         client.on('stop', () => { // client.on('stop', client??? => { 
             console.log('client disconnected');
