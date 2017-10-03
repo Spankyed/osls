@@ -1,6 +1,5 @@
 const hostname = 'opensourcelivestream.com';
 const shdb = require('shdb');
-
 const http = require('http');
 const https = require('https');
 const WebSocket = require('ws');
