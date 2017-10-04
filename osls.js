@@ -1,22 +1,65 @@
 const hostname = ''; // opensourcelivestream.com
+const streamNameSecret = 'secret string';
 const shdb = require('shdb');
 const http = require('http');
 const https = require('https');
 const WebSocket = require('ws');
 const RtmpServer = require('rtmp-server');
 const { spawn } = require('child_process');
-const spawnFfmpeg = streamKey => {
-    const args = ['-i', `rtmp://${hostname}/live/${streamKey}`, '-bsf:v', 'h264_mp4toannexb', '-qscale', '0', '-acodec', 'copy', '-vcodec', 'copy', '-bufsize', ' 1835k', '-f', 'HLS', '-hls_wrap', '8', '/root/videos/index.m3u8'];
-    const ffmpeg = spawn('ffmpeg', args);
-    console.log(`ffmpeg spawned for ${streamKey}`);
-    ffmpeg.on('exit', () => {
-        console.log(`the ffmpeg spawned for ${streamKey} exited`);
+const cipherStreamNamePromise = streamName => {
+    return new Promise((resolve, reject) => {
+        let streamNameCipher = crypto.createCipher('aes192', streamNameSecret);
+        let encrypted = '';
+        streamNameCipher.on('readable', () => {
+            const data = streamNameCipher.read();
+            if (data) {
+                encrypted += data.toString('base64');
+            }
+        });
+        streamNameCipher.on('end', () => {
+            resolve(encrypted);
+        });
+        streamNameCipher.write(streamName);
+        streamNameCipher.end();
     });
-    ffmpeg.stderr.on('data', function(data) {
-        console.log(`${streamKey} data: ${data}`);
+};
+const decipherStreamNamePromise = cipheredStreamName => {
+    return new Promise((resolve, reject) => {
+        let streamNameDecipher = crypto.createDecipher('aes192', streamNameSecret);
+        let decrypted = '';
+        streamNameDecipher.on('readable', () => {
+            const data = streamNameDecipher.read();
+            if (data) {
+                decrypted += data.toString('utf8');
+            }
+        });
+        streamNameDecipher.on('end', () => {
+            resolve(decrypted);
+        });
+        streamNameDecipher.write(cipheredStreamName, 'base64');
+        streamNameDecipher.end();
     });
-    return ffmpeg;
-}
+};
+const spawnFfmpegPromise = streamKey => {
+    return new Promise((resolve, reject) => {
+        decipherStreamNamePromise(streamKey).then(decipheredStreamName => {
+            const streamName = decipheredStreamName;
+            console.log(`ffmpeg spawned for ${streamName}`);
+            const args = ['-i', `rtmp://${hostname}/livestreams/${encodeURIComponent(streamKey)}`, '-bsf:v', 'h264_mp4toannexb', '-qscale', '0', '-acodec', 'copy', '-vcodec', 'copy', '-bufsize', ' 1835k', '-f', 'HLS', '-hls_wrap', '8', `/root/livestreams/${streamName}.m3u8`];
+            const ffmpeg = spawn('ffmpeg', args);
+            ffmpeg.on('exit', () => {
+                console.log(`> the ffmpeg spawned for ${streamName} has exited!`);
+            });
+            ffmpeg.stderr.on('data', (data) => {
+                // console.log(data);
+            });
+            resolve(ffmpeg);
+        }).catch(err => {
+            reject(err);
+        });
+    });
+};
+
 shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileData => {
     return Promise.all([shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/fullchain.pem`), Promise.resolve(fileData)]);
 }).then(cert0key1 => {
@@ -25,25 +68,31 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
         'cert': cert0key1[0]
     }, (req, res) => {
         console.log(`${req.connection.remoteAddress} => https => ${req.method} => ${req.url}`);
-        if (req.url === '/') {
-            shdb.readFilePromise(`/root/responses/html/index.html`).then(fileData => {
+        const splitUrl = req.url.split('/');
+        if (splitUrl[1] === 'livestreams') {
+            const streamFile = splitUrl[2];
+        } else if (splitUrl[1] === 'responses') {
+            const responseFile = splitUrl[2];
+        } else {}
+        if (req.url === '/' || req.url === '/index' || req.url === '/index.html') {
+            shdb.readFilePromise(`/root/responses/index.html`).then(fileData => {
                 res.writeHead(200, { 'Content-Type': 'text/html' });
                 res.end(fileData);
             }).catch(err => {
                 res.writeHead(404, { 'Content-Type': 'text/plain' });
                 res.end('404');
             });
-        } else if (req.url === '/index.m3u8') {
-            shdb.readFilePromise(`/root/videos/index.m3u8`).then(fileData => {
-                res.writeHead(200, { 'Content-Type': 'application/vnd.apple.mpegurl' });
-                res.end(fileData.toString('utf8'), 'utf8');
+        } else if (splitUrl[1] === 'responses') {
+            shdb.readFilePromise(`/root/responses/${responseFile}`).then(fileData => {
+                res.writeHead(200, { 'Content-Type': `${mime.lookup(responseFile)}` });
+                res.end(fileData);
             }).catch(err => {
                 res.writeHead(404, { 'Content-Type': 'text/plain' });
                 res.end('404');
             });
-        } else if (req.url.indexOf('index') !== -1 && req.url.indexOf('.ts') !== -1) {
-            shdb.readFilePromise(`/root/videos${req.url}`).then(fileData => {
-                res.writeHead(200, { 'Content-Type': 'video/mp2t' });
+        } else if (splitUrl[1] === 'livestreams') {
+            shdb.readFilePromise(`/root/livestreams/${streamFile}`).then(fileData => {
+                res.writeHead(200, { 'Content-Type': `${mime.lookup(streamFile)}` });
                 res.end(fileData);
             }).catch(err => {
                 console.log(err);
@@ -64,8 +113,6 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
         });
     });
     httpsServer.listen(443, hostname);
-    return Promise.resolve();
-}).then(() => {
     const httpServer = http.createServer((req, res) => {
         console.log(`${req.connection.remoteAddress} => http => ${req.method} => ${req.url}`);
         res.writeHead(301, { 'Location': `https://${hostname}/` });
@@ -78,17 +125,18 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
     });
     rtmpServer.on('client', client => {
         client.on('connect', () => {
-            console.log(`RTMP client ${client.app} has connected`);
-        });
-        client.on('play', ({ streamName }) => {
-            console.log(`RTMP stream ${streamName} play event`);
+            console.log(`> RTMP client ${client.app} has connected.`);
         });
         client.on('publish', ({ streamName }) => {
-            console.log(`RTMP stream ${streamName} publish event`);
-            spawnFfmpeg(streamName);
+            console.log(`> RTMP stream ${streamName} publish event.`);
+            spawnFfmpegPromise(streamName).then(ffmpeg => {
+                // console.log(ffmpeg);
+            }).catch(err => {
+                console.log(err);
+            });;
         });
-        client.on('stop', () => { // client.on('stop', client??? => { 
-            console.log('client disconnected');
+        client.on('stop', () => {
+            console.log(`> RTMP client ${client.app} has disconnected.`);
         });
     });
     rtmpServer.listen(1935);
@@ -98,6 +146,7 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
 }).catch(err => {
     console.log(err);
 });
+
 process.stdin.resume();
 process.on('exit', () => {
     console.log('exit');
