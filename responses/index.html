@@ -80,21 +80,27 @@
         </div>
     </div>
     <script>
-    let video = document.getElementById('video');
-    let srcButton = document.getElementById('srcButton');
-    let srcName = document.getElementById('srcName');
-    srcButton.onclick = () => {
-        if (Hls.isSupported()) {
-            let hls = new Hls();
-            hls.loadSource(`/livestreams/${srcName.value}.m3u8`);
-            hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                video.play();
-            });
-        } else {
-            video.src = `/livestreams/${srcName.value}.m3u8`;
+    document.addEventListener("DOMContentLoaded", function() {
+        let socket = new WebSocket('wss://opensourcelivestream.com/');
+        let video = document.getElementById('video');
+        let srcButton = document.getElementById('srcButton');
+        let srcName = document.getElementById('srcName');
+        srcButton.onclick = () => {
+            if (Hls.isSupported()) {
+                let hls = new Hls();
+                hls.loadSource(`/livestreams/${srcName.value}.m3u8`);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    video.play();
+                });
+            } else {
+                video.src = `/livestreams/${srcName.value}.m3u8`;
+            }
         }
-    }
+        // default source
+        srcName.value = 'test';
+        srcButton.click();
+    });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>

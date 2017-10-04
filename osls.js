@@ -69,9 +69,9 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
         'key': cert0key1[1],
         'cert': cert0key1[0]
     }, (req, res) => {
-        console.log(`${req.connection.remoteAddress} => https => ${req.method} => ${req.url}`);
         const splitUrl = req.url.split('/');
         if (req.url === '/' || req.url === '/index' || req.url === '/index.html') {
+            console.log(`${req.connection.remoteAddress} => https => ${req.method} => ${req.url}`);
             shdb.readFilePromise(`/root/responses/index.html`).then(fileData => {
                 res.writeHead(200, { 'Content-Type': 'text/html' });
                 res.end(fileData);
@@ -80,6 +80,7 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
                 res.end('404');
             });
         } else if (splitUrl[1] === 'responses') {
+            console.log(`${req.connection.remoteAddress} => https => ${req.method} => ${req.url}`);
             const responseFile = splitUrl[2];
             shdb.readFilePromise(`/root/responses/${responseFile}`).then(fileData => {
                 res.writeHead(200, { 'Content-Type': `${mime.lookup(responseFile)}` });
@@ -89,6 +90,7 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
                 res.end('404');
             });
         } else if (splitUrl[1] === 'livestreams') {
+            // console.log(`${req.connection.remoteAddress} => https => ${req.method} => ${req.url}`);
             const streamFile = splitUrl[2];
             shdb.readFilePromise(`/root/livestreams/${streamFile}`).then(fileData => {
                 res.writeHead(200, { 'Content-Type': `${mime.lookup(streamFile)}` });
