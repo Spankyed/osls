@@ -11,25 +11,25 @@
     }
 
     body {
-        color: lightgreen;
+        color: hotpink;
         background-color: black;
         text-align: center;
     }
 
     .form-control {
-        background-color: #9932CC;
-        border-color: #9932CC;
-        color: lightgreen;
+        background-color: hotpink;
+        border-color: yellow;
+        color: black;
     }
 
     .form-control::placeholder {
-        color: lightgreen;
+        color: black;
     }
 
     .form-control:focus {
-        background-color: lightgreen;
-        border-color: lightgreen;
-        color: #9932CC;
+        background-color: yellow;
+        border-color: hotpink;
+        color: black;
     }
 
     .btn {
@@ -40,31 +40,28 @@
 
     .btn:hover {
         border-color: yellow;
-        background-color: yellow;
-        color: hotpink;
+        background-color: hotpink;
+        color: black;
     }
 
     a {
-        color: #9932CC;
+        color: yellow;
     }
 
     a:hover {
-        color: hotpink;
+        color: lightgreen;
+        text-decoration: none;
     }
-
     </style>
 </head>
 
 <body>
     <div class="container-fluid">
-        <h1>Welcome, <a href="https://opensourcelivestream.com">opensourcelivestream.com</a> is currently under development. Don't be surprised if something is broken, or misspelt.</h1>
-        <h3> Visit the <a href="https://discord.gg/RRHvYUe">setHacked discord server</a> to reach a developer.</h3>
-        <h3> Visit github to view the <a href="https://github.com/anticlergygang/osls">source</a>.</h3>
         <div class="row no-gutters">
             <div class="col"></div>
             <div class="col-6">
                 <div class="input-group">
-                    <input type="text" class="form-control" placeholder="Source name... (ex: test)" aria-label="Source name..." id="srcName">
+                    <input type="text" class="form-control" placeholder="Source name..." aria-label="Source name..." id="srcName">
                     <span class="input-group-btn">
                     <button class="btn btn-secondary" type="button" id="srcButton">Get livestream source!</button>
                 </span>
@@ -72,7 +69,15 @@
             </div>
             <div class="col"></div>
         </div>
-        <video id="video" width="100%" autoplay controls></video>
+        <div class="row no-gutters">
+            <div class="col">
+                <video id="video" width="100%" autoplay controls></video>
+            </div>
+        </div>
+        <div class="row no-gutters">
+            <div class="col">
+                <h3> Visit the <a href="https://discord.gg/RRHvYUe">setHacked discord server</a> to reach a developer.</h3></div>
+        </div>
     </div>
     <script>
     let video = document.getElementById('video');
