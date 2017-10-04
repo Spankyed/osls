@@ -3,6 +3,7 @@
 
 <head>
     <title>Opensource Livestream</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
     <style type="text/css">
     * {
         margin: 0;
@@ -10,27 +11,69 @@
     }
 
     body {
-        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: lightgreen;
+        background-color: black;
+        text-align: center;
     }
+
+    .form-control {
+        background-color: #9932CC;
+        border-color: #9932CC;
+        color: lightgreen;
+    }
+
+    .form-control::placeholder {
+        color: lightgreen;
+    }
+
+    .form-control:focus {
+        background-color: lightgreen;
+        border-color: lightgreen;
+        color: #9932CC;
+    }
+
+    .btn {
+        border-color: yellow;
+        background-color: yellow;
+        color: hotpink;
+    }
+
+    .btn:hover {
+        border-color: yellow;
+        background-color: yellow;
+        color: hotpink;
+    }
+
+    a {
+        color: #9932CC;
+    }
+
+    a:hover {
+        color: hotpink;
+    }
+
     </style>
 </head>
 
 <body>
-    <h1>Welcome, opensourcelivestream.com is currently under development.</h1>
-    <h3>
-Visit the <a href="https://discord.gg/RRHvYUe">setHacked discord server</a>
-to reach a developer.
-</h3>
-    <h3>
-Visit github to view the <a href="https://github.com/anticlergygang/osls">source</a>
-.
-</h3>
-    <span>
-<input type="text" name="srcName" id="srcName">
-<button id="srcButton">get source</button>
-</span>
-    <video id="video" width="100%" autoplay controls></video>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <div class="container-fluid">
+        <h1>Welcome, <a href="https://opensourcelivestream.com">opensourcelivestream.com</a> is currently under development. Don't be surprised if something is broken, or misspelt.</h1>
+        <h3> Visit the <a href="https://discord.gg/RRHvYUe">setHacked discord server</a>to reach a developer.</h3>
+        <h3> Visit github to view the <a href="https://github.com/anticlergygang/osls">source</a>.</h3>
+        <div class="row no-gutters">
+            <div class="col"></div>
+            <div class="col-6">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Source name... (ex: test)" aria-label="Source name..." id="srcName">
+                    <span class="input-group-btn">
+                    <button class="btn btn-secondary" type="button" id="srcButton">Get livestream source!</button>
+                </span>
+                </div>
+            </div>
+            <div class="col"></div>
+        </div>
+        <video id="video" width="100%" autoplay controls></video>
+    </div>
     <script>
     let video = document.getElementById('video');
     let srcButton = document.getElementById('srcButton');
@@ -48,6 +91,10 @@ Visit github to view the <a href="https://github.com/anticlergygang/osls">source
         }
     }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
 </body>
 
 </html>
