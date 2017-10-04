@@ -1,6 +1,6 @@
 # osls
 
-Open source livestreaming technology.
+open source live streaming technology.
 
 # Check it out live
 
