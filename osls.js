@@ -98,7 +98,6 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
 }).catch(err => {
     console.log(err);
 });
-
 process.stdin.resume();
 process.on('exit', () => {
     console.log('exit');
