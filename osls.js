@@ -5,7 +5,9 @@ const http = require('http');
 const https = require('https');
 const WebSocket = require('ws');
 const RtmpServer = require('rtmp-server');
+const mime = require('mime-types');
 const { spawn } = require('child_process');
+const crypto = require('crypto');
 const cipherStreamNamePromise = streamName => {
     return new Promise((resolve, reject) => {
         let streamNameCipher = crypto.createCipher('aes192', streamNameSecret);
@@ -69,11 +71,6 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
     }, (req, res) => {
         console.log(`${req.connection.remoteAddress} => https => ${req.method} => ${req.url}`);
         const splitUrl = req.url.split('/');
-        if (splitUrl[1] === 'livestreams') {
-            const streamFile = splitUrl[2];
-        } else if (splitUrl[1] === 'responses') {
-            const responseFile = splitUrl[2];
-        } else {}
         if (req.url === '/' || req.url === '/index' || req.url === '/index.html') {
             shdb.readFilePromise(`/root/responses/index.html`).then(fileData => {
                 res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -83,6 +80,7 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
                 res.end('404');
             });
         } else if (splitUrl[1] === 'responses') {
+            const responseFile = splitUrl[2];
             shdb.readFilePromise(`/root/responses/${responseFile}`).then(fileData => {
                 res.writeHead(200, { 'Content-Type': `${mime.lookup(responseFile)}` });
                 res.end(fileData);
@@ -91,6 +89,7 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
                 res.end('404');
             });
         } else if (splitUrl[1] === 'livestreams') {
+            const streamFile = splitUrl[2];
             shdb.readFilePromise(`/root/livestreams/${streamFile}`).then(fileData => {
                 res.writeHead(200, { 'Content-Type': `${mime.lookup(streamFile)}` });
                 res.end(fileData);

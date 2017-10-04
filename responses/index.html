@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Opensource Livestream</title>
+    <style type="text/css">
+    * {
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+    </style>
+</head>
+
+<body>
+    <h1>Welcome, opensourcelivestream.com is currently under development.</h1>
+    <h3>
+Visit the <a href="https://discord.gg/RRHvYUe">setHacked discord server</a>
+to reach a developer.
+</h3>
+    <h3>
+Visit github to view the <a href="https://github.com/anticlergygang/osls">source</a>
+.
+</h3>
+    <span>
+<input type="text" name="srcName" id="srcName">
+<button id="srcButton">get source</button>
+</span>
+    <video id="video" width="100%" autoplay controls></video>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script>
+    let video = document.getElementById('video');
+    let srcButton = document.getElementById('srcButton');
+    let srcName = document.getElementById('srcName');
+    srcButton.onclick = () => {
+        if (Hls.isSupported()) {
+            let hls = new Hls();
+            hls.loadSource(`/livestreams/${srcName.value}.m3u8`);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                video.play();
+            });
+        } else {
+            video.src = `/livestreams/${srcName.value}.m3u8`;
+        }
+    }
+    </script>
+</body>
+
+</html>
