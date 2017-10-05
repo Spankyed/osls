@@ -110,7 +110,7 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(keyDa
                 switch (jsonMessageFromClient.type) {
                     case 'open':
                         {
-                            console.log(`${ws.connection.remoteAddress} > wss > open`);
+                            console.log(`${ws.connection.remoteAddress} > wss > open @ ${(new Date().getTime())}`);
                             ws.send(JSON.stringify({
                                 originalTimestamp: jsonMessageFromClient.timestamp,
                                 newTimestamp: (new Date().getTime())
@@ -119,7 +119,7 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(keyDa
                         }
                     case 'chat':
                         {
-                            console.log(`${ws.connection.remoteAddress} > wss > message > ${jsonMessageFromClient.message}`);
+                            console.log(`${ws.connection.remoteAddress} > wss > message > ${jsonMessageFromClient.message} @ ${(new Date().getTime())}`);
                             wssServer.clients.forEach((client, i) => {
                                 if (client.chatRoom === jsonMessageFromClient.chatRoom) {
                                     client.send(JSON.stringify({
@@ -142,7 +142,7 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(keyDa
             });
         });
         ws.on('close', () => {
-            console.log(`${ws.connection.remoteAddress} > wss > close`);
+            console.log(`${ws.connection.remoteAddress} > wss > close @ ${(new Date().getTime())}`);
         });
     });
     const httpServer = http.createServer((req, res) => {
