@@ -1,0 +1,55 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    color: hotpink;
+    background-color: black;
+    text-align: center;
+}
+
+.form-control {
+    background-color: hotpink;
+    border-color: yellow;
+    color: black;
+}
+
+.form-control::placeholder {
+    color: black;
+}
+
+.form-control:focus {
+    background-color: yellow;
+    border-color: hotpink;
+    color: black;
+}
+
+.btn {
+    border-color: yellow;
+    background-color: yellow;
+    color: hotpink;
+}
+
+.btn:hover {
+    border-color: yellow;
+    background-color: hotpink;
+    color: black;
+}
+
+a {
+    color: yellow;
+}
+
+a:hover {
+    color: lightblue;
+    text-decoration: none;
+}
+
+#chatCol {
+    text-align: left;
+}
+
+p {
+    margin: 0;
+}

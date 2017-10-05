@@ -8,6 +8,7 @@ const RtmpServer = require('rtmp-server');
 const mime = require('mime-types');
 const { spawn } = require('child_process');
 const crypto = require('crypto');
+
 const cipherStreamNamePromise = streamName => {
     return new Promise((resolve, reject) => {
         let streamNameCipher = crypto.createCipher('aes192', streamNameSecret);
@@ -46,15 +47,12 @@ const spawnFfmpegPromise = streamKey => {
     return new Promise((resolve, reject) => {
         decipherStreamNamePromise(streamKey).then(decipheredStreamName => {
             const streamName = decipheredStreamName;
-            console.log(`ffmpeg spawned for ${streamName}`);
             const args = ['-i', `rtmp://${hostname}/livestreams/${encodeURIComponent(streamKey)}`, '-bsf:v', 'h264_mp4toannexb', '-qscale', '0', '-acodec', 'copy', '-vcodec', 'copy', '-bufsize', ' 1835k', '-f', 'HLS', '-hls_wrap', '8', `/root/livestreams/${streamName}.m3u8`];
             const ffmpeg = spawn('ffmpeg', args);
             ffmpeg.on('exit', () => {
-                console.log(`> the ffmpeg spawned for ${streamName} has exited!`);
+                console.log(`stream '${streamName}' stopped`);
             });
-            ffmpeg.stderr.on('data', (data) => {
-                // console.log(data);
-            });
+            ffmpeg.stderr.on('data', (data) => {});
             resolve(ffmpeg);
         }).catch(err => {
             reject(err);
@@ -62,16 +60,16 @@ const spawnFfmpegPromise = streamKey => {
     });
 };
 
-shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileData => {
-    return Promise.all([shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/fullchain.pem`), Promise.resolve(fileData)]);
-}).then(cert0key1 => {
+
+shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(keyData => {
+    return Promise.all([Promise.resolve(keyData), shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/fullchain.pem`)]);
+}).then(key0cert1 => {
     const httpsServer = https.createServer({
-        'key': cert0key1[1],
-        'cert': cert0key1[0]
+        'key': key0cert1[0],
+        'cert': key0cert1[1]
     }, (req, res) => {
         const splitUrl = req.url.split('/');
         if (req.url === '/' || req.url === '/index' || req.url === '/index.html') {
-            console.log(`${req.connection.remoteAddress} => https => ${req.method} => ${req.url}`);
             shdb.readFilePromise(`/root/responses/index.html`).then(fileData => {
                 res.writeHead(200, { 'Content-Type': 'text/html' });
                 res.end(fileData);
@@ -80,7 +78,6 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
                 res.end('404');
             });
         } else if (splitUrl[1] === 'responses') {
-            console.log(`${req.connection.remoteAddress} => https => ${req.method} => ${req.url}`);
             const responseFile = splitUrl[2];
             shdb.readFilePromise(`/root/responses/${responseFile}`).then(fileData => {
                 res.writeHead(200, { 'Content-Type': `${mime.lookup(responseFile)}` });
@@ -90,32 +87,63 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
                 res.end('404');
             });
         } else if (splitUrl[1] === 'livestreams') {
-            // console.log(`${req.connection.remoteAddress} => https => ${req.method} => ${req.url}`);
             const streamFile = splitUrl[2];
             shdb.readFilePromise(`/root/livestreams/${streamFile}`).then(fileData => {
                 res.writeHead(200, { 'Content-Type': `${mime.lookup(streamFile)}` });
                 res.end(fileData);
             }).catch(err => {
-                console.log(err);
+                res.writeHead(404, { 'Content-Type': 'text/plain' });
+                res.end('404');
             });
         } else {
             res.writeHead(404, { 'Content-Type': 'text/plain' });
             res.end('404');
         }
     });
+    httpsServer.listen(443, hostname);
     const wssServer = new WebSocket.Server({ 'server': httpsServer });
     wssServer.on('connection', (ws, req) => {
-        console.log(`${req.connection.remoteAddress} => wss => open`);
-        ws.on('message', message => {
-            console.log(`${req.connection.remoteAddress} => wss => message => ${message}`);
+        ws.chatRoom = req.url.replace('/', '');
+        console.log(req.connection.remoteAddress);
+        ws.on('message', messageFromClient => {
+            Promise.resolve(JSON.parse(messageFromClient)).then(jsonMessageFromClient => {
+                console.log(jsonMessageFromClient);
+                switch (jsonMessageFromClient.type) {
+                    case 'open':
+                        {
+                            ws.send(JSON.stringify({
+                                originalTimestamp: jsonMessageFromClient.timestamp,
+                                newTimestamp: (new Date().getTime())
+                            }));
+                            break;
+                        }
+                    case 'chat':
+                        {
+                            wssServer.clients.forEach((client, i) => {
+                                console.log(client.chatRoom);
+                                if (client.chatRoom === jsonMessageFromClient.chatRoom) {
+                                    client.send(JSON.stringify({
+                                        type: 'chat',
+                                        message: jsonMessageFromClient.message
+                                    }));
+                                }
+                            });
+                            break;
+                        }
+                    case 'pong':
+                        {
+                            break;
+                        }
+                    default:
+                        {}
+                }
+            }).catch(err => {
+                console.log(err);
+            });
         });
-        ws.on('close', () => {
-            console.log(`${req.connection.remoteAddress} => wss => close`);
-        });
+        ws.on('close', () => {});
     });
-    httpsServer.listen(443, hostname);
     const httpServer = http.createServer((req, res) => {
-        console.log(`${req.connection.remoteAddress} => http => ${req.method} => ${req.url}`);
         res.writeHead(301, { 'Location': `https://${hostname}/` });
         res.end('Going somewhere safe.');
     });
@@ -125,39 +153,24 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(fileD
         throw err;
     });
     rtmpServer.on('client', client => {
-        client.on('connect', () => {
-            console.log(`> RTMP client ${client.app} has connected.`);
-        });
+        client.on('connect', () => {});
         client.on('publish', ({ streamName }) => {
-            console.log(`> RTMP stream ${streamName} publish event.`);
             spawnFfmpegPromise(streamName).then(ffmpeg => {
-                // console.log(ffmpeg);
-            }).catch(err => {
-                console.log(err);
-            });;
+                console.log(`stream '${streamName}' started`);
+            }).catch(err => {});;
         });
-        client.on('stop', () => {
-            console.log(`> RTMP client ${client.app} has disconnected.`);
-        });
+        client.on('stop', () => {});
     });
     rtmpServer.listen(1935);
-    return Promise.resolve();
-}).then(() => {
-    console.log('Quiet... too quiet.');
 }).catch(err => {
     console.log(err);
 });
 
 process.stdin.resume();
-process.on('exit', () => {
-    console.log('exit');
-});
+process.on('exit', () => {});
 process.on('SIGINT', () => {
-    console.log('SIGINT');
     process.exit()
 });
 process.on('uncaughtException', err => {
-    console.log('uncaughtException');
-    console.log(err);
     process.exit()
 });

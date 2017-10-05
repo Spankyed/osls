@@ -4,104 +4,32 @@
 <head>
     <title>OSLS: Open Source Live Stream</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
-    <style type="text/css">
-    * {
-        margin: 0;
-        padding: 0;
-    }
-
-    body {
-        color: hotpink;
-        background-color: black;
-        text-align: center;
-    }
-
-    .form-control {
-        background-color: hotpink;
-        border-color: yellow;
-        color: black;
-    }
-
-    .form-control::placeholder {
-        color: black;
-    }
-
-    .form-control:focus {
-        background-color: yellow;
-        border-color: hotpink;
-        color: black;
-    }
-
-    .btn {
-        border-color: yellow;
-        background-color: yellow;
-        color: hotpink;
-    }
-
-    .btn:hover {
-        border-color: yellow;
-        background-color: hotpink;
-        color: black;
-    }
-
-    a {
-        color: yellow;
-    }
-
-    a:hover {
-        color: lightgreen;
-        text-decoration: none;
-    }
-    </style>
+    <link rel="stylesheet" type="text/css" href="/responses/index.css">
 </head>
 
 <body>
     <div class="container-fluid">
-        <div class="row no-gutters">
-            <div class="col"></div>
-            <div class="col-6">
-                <div class="input-group">
-                    <input type="text" class="form-control" placeholder="Source name..." aria-label="Source name..." id="srcName">
+        <div class="row no-gutters" id="bannerMessageRow">
+            <div class="col" id="bannerMessageCol">
+                <h3 id="bannerMessage">Visit the <a href="https://discord.gg/RRHvYUe">setHacked discord server</a> to reach a developer.</h3>
+            </div>
+        </div>
+        <div class="row no-gutters" id="videoChatRow">
+            <div class="col-md-12 col-lg-9" id="videoCol">
+                <video width="100%" autoplay controls id="video"></video>
+            </div>
+            <div class="col-md-12 col-lg-3" id="chatCol">
+                <div class="input-group" id="chatInput">
+                    <input type="text" class="form-control" placeholder="Say something..." aria-label="Say something..." id="message">
                     <span class="input-group-btn">
-                    <button class="btn btn-secondary" type="button" id="srcButton">Get livestream source!</button>
-                </span>
+                        <button class="btn btn-secondary" type="button" id="send">Send</button>
+                    </span>
                 </div>
+                <div></div>
             </div>
-            <div class="col"></div>
-        </div>
-        <div class="row no-gutters">
-            <div class="col">
-                <video id="video" width="100%" autoplay controls></video>
-            </div>
-        </div>
-        <div class="row no-gutters">
-            <div class="col">
-                <h3> Visit the <a href="https://discord.gg/RRHvYUe">setHacked discord server</a> to reach a developer.</h3></div>
         </div>
     </div>
-    <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        let socket = new WebSocket('wss://opensourcelivestream.com/');
-        let video = document.getElementById('video');
-        let srcButton = document.getElementById('srcButton');
-        let srcName = document.getElementById('srcName');
-        srcButton.onclick = () => {
-            if (Hls.isSupported()) {
-                let hls = new Hls();
-                hls.loadSource(`/livestreams/${srcName.value}.m3u8`);
-                hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    video.play();
-                });
-            } else {
-                video.src = `/livestreams/${srcName.value}.m3u8`;
-            }
-        }
-        // default source
-        srcName.value = 'test';
-        srcButton.click();
-    });
-    </script>
+    <script type="text/javascript" src="/responses/index.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
