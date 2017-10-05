@@ -103,14 +103,14 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(keyDa
     httpsServer.listen(443, hostname);
     const wssServer = new WebSocket.Server({ 'server': httpsServer });
     wssServer.on('connection', (ws, req) => {
+        ws.connection = { remoteAddress: req.connection.remoteAddress };
         ws.chatRoom = req.url.replace('/', '');
-        console.log(req.connection.remoteAddress);
         ws.on('message', messageFromClient => {
             Promise.resolve(JSON.parse(messageFromClient)).then(jsonMessageFromClient => {
-                console.log(jsonMessageFromClient);
                 switch (jsonMessageFromClient.type) {
                     case 'open':
                         {
+                            console.log(`${ws.connection.remoteAddress} > wss > open`);
                             ws.send(JSON.stringify({
                                 originalTimestamp: jsonMessageFromClient.timestamp,
                                 newTimestamp: (new Date().getTime())
@@ -119,8 +119,8 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(keyDa
                         }
                     case 'chat':
                         {
+                            console.log(`${ws.connection.remoteAddress} > wss > message > ${jsonMessageFromClient.message}`);
                             wssServer.clients.forEach((client, i) => {
-                                console.log(client.chatRoom);
                                 if (client.chatRoom === jsonMessageFromClient.chatRoom) {
                                     client.send(JSON.stringify({
                                         type: 'chat',
@@ -141,7 +141,9 @@ shdb.readFilePromise(`/etc/letsencrypt/live/${hostname}/privkey.pem`).then(keyDa
                 console.log(err);
             });
         });
-        ws.on('close', () => {});
+        ws.on('close', () => {
+            console.log(`${ws.connection.remoteAddress} > wss > close`);
+        });
     });
     const httpServer = http.createServer((req, res) => {
         res.writeHead(301, { 'Location': `https://${hostname}/` });
