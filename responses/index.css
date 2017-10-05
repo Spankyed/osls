@@ -48,6 +48,8 @@ a:hover {
 
 #chatCol {
     text-align: left;
+    height: 100vh;
+    overflow: scroll;
 }
 
 p {
